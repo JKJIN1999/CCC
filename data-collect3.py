@@ -70,27 +70,29 @@ processed_dict = processJson(sca_data)
 
 #processed_dict = {day_time: [sentiment,count]}
 gathered_dict = comm.gather(processed_dict, root=0)
-date_dict = defaultdict(float)
-hour_dict = defaultdict(float)
-c_date_dict = defaultdict(int)
-c_hour_dict = defaultdict(int)
-result = []
 
-for item in gathered_dict:
-    for key, value in item.items():
-        date, hour = key.split("T")
-        if date in date_dict:
-            date_dict[date] = value[0] + date_dict.get(date)
-            c_date_dict[date] = value[1] + c_date_dict.get(date)
-        else:
-            date_dict[date] = value[0]
-            c_date_dict[date] = value[1]
-        if hour in hour_dict:
-            hour_dict[hour] = value[0] + hour_dict.get(date)
-            c_hour_dict[hour] = value[1] + c_hour_dict.get(date)
-        else:
-             hour_dict[hour] = value[0]
-             c_hour_dict[hour] = value[1]
+date_dict = {}
+hour_dict = {}
+c_date_dict = {}
+c_hour_dict = {}
+
+result = []
+if gathered_dict is not None:
+    for item in gathered_dict:
+        for key, value in item.items():
+            date, hour = key.split("T")
+            if date in date_dict:
+                date_dict[date] = value[0] + date_dict.get(date)
+                c_date_dict[date] = value[1] + c_date_dict.get(date)
+            else:
+                date_dict[date] = value[0]
+                c_date_dict[date] = value[1]
+            if hour in hour_dict:
+                hour_dict[hour] = value[0] + hour_dict.get(hour)
+                c_hour_dict[hour] = value[1] + c_hour_dict.get(hour)
+            else:
+                hour_dict[hour] = value[0]
+                c_hour_dict[hour] = value[1]
 
 for dict in (date_dict,hour_dict,c_date_dict,c_hour_dict):
     result.append(maxFinder(dict))
