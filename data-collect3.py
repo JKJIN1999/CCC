@@ -16,16 +16,15 @@ def mergeDictionary(gathered_dic):
         return gathered_dic
     return merged
 
+#input scattered data and output date_hour 
+
 def processJson(sca_data):
-    date_sentiment = defaultdict(float)
-    hour_sentiment = defaultdict(float)
-    hour_count = defaultdict(int)
-    date_count = defaultdict(int)
+    processed_dict = {}
 
     for data_rows in sca_data:
         sentiment = 0
-        date = None
-        hour = None
+        value = []
+        date_hour = None
         if "doc" in data_rows:
             doc = data_rows["doc"]
             if "data" in doc:
@@ -34,16 +33,14 @@ def processJson(sca_data):
                     sentiment = item.get("sentiment")
                 elif isinstance(item.get("sentiment", {}).get("score"),(float,int)):
                     sentiment = float(item.get("sentiment", {}).get("score"))
-                date, hour = item["created_at"].split("T")
-                hour = hour[:2]
-
-                date_sentiment[date] += sentiment
-                date_count[date] += 1
-
-                hour_sentiment[hour] += sentiment
-                hour_count[hour] += 1
-
-    return dict(date_sentiment), dict(hour_sentiment), dict(date_count), dict(hour_count)
+                date_hour = item["created_at"][:13]
+                if date_hour in processed_dict:
+                    value = [(sentiment + processed_dict.get(date_hour)[0]),(1 + processed_dict.get(date_hour)[1])]
+                else:
+                    value.append(sentiment)
+                    value.append(1)
+                processed_dict[date_hour] = value
+    return processed_dict
 
 def maxFinder(dic):
     if not dic:
@@ -58,25 +55,45 @@ rank = comm.Get_rank()
 data = None
 time_begin = 0.0
 
-merged_date = {}
-merged_hour = {}
+merged_date_hour = {}
 time_begin = time.time()
 
 if rank == 0:
-    with open('twitter-50mb.json') as file:
+    with open("twitter-50mb.json", encoding='utf-8') as file:
         data = json.load(file)["rows"]  
         data = [data[i::size] for i in range(size)]
 
 sca_data = comm.scatter(data, root=0)
 
-date_sentiment, hour_sentiment, date_count, hour_count = processJson(sca_data)
+processed_dict = processJson(sca_data)
 
+
+#processed_dict = {day_time: [sentiment,count]}
+gathered_dict = comm.gather(processed_dict, root=0)
+date_dict = defaultdict(float)
+hour_dict = defaultdict(float)
+c_date_dict = defaultdict(int)
+c_hour_dict = defaultdict(int)
 result = []
 
-for data_type in (date_sentiment, hour_sentiment, date_count, hour_count):
-    type_gathered = comm.gather(data_type, root=0)
-    merged = mergeDictionary(type_gathered)
-    result.append(maxFinder(merged))
+for item in gathered_dict:
+    for key, value in item.items():
+        date, hour = key.split("T")
+        if date in date_dict:
+            date_dict[date] = value[0] + date_dict.get(date)
+            c_date_dict[date] = value[1] + c_date_dict.get(date)
+        else:
+            date_dict[date] = value[0]
+            c_date_dict[date] = value[1]
+        if hour in hour_dict:
+            hour_dict[hour] = value[0] + hour_dict.get(date)
+            c_hour_dict[hour] = value[1] + c_hour_dict.get(date)
+        else:
+             hour_dict[hour] = value[0]
+             c_hour_dict[hour] = value[1]
+
+for dict in (date_dict,hour_dict,c_date_dict,c_hour_dict):
+    result.append(maxFinder(dict))
 
 if rank == 0:
     print(f"Date with the highest tweet count is {result[2][0]} with {result[2][1]} tweets")

@@ -19,6 +19,7 @@ def processJson(sca_data):
     date_count = {}
 
     for data_rows in sca_data:
+        sentiment = 0
         if "doc" in data_rows:
             doc = data_rows["doc"]
             if "data" in doc:
