@@ -1,0 +1,10 @@
+Date with the highest tweet count is 2021-06-21 with 652 tweets
+
+Hour with the highest tweet count is 03 with 47 tweets
+
+The happiest date is 2021-06-21 with 63.15673514357181 sentiment
+
+The happiest hour is 05 with 7.850009811067737 sentiment
+
+Total run time = 0.01174020767211914
+
