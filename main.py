@@ -12,16 +12,14 @@ def maxFinder(dic):
         return max_key, max_value
 
 def splitTweet(line):
-    date = None
-    hour = None
+    created_at = None
     sentiment = None
     if "created_at" in line:
-            date, hour = line.split('"created_at":"')[1].split('"',1)[0].split(":")[0].split("T")
-            hour = hour[:2]
+            created_at = line.split('"created_at":"')[1].split('"',1)[0].split(":")[0]
     if '"score"' not in line:
         if '"sentiment"' in line:
             sentiment = float(line.split('"sentiment":')[1].split('}')[0])
-    return date, hour, sentiment
+    return created_at, sentiment
 
 def mergeTweet(tweet_collected, key, sentiment):
         if isinstance(sentiment, float):
@@ -47,7 +45,6 @@ def getArgs():
     return parser.parse_args()
 
 def main():
-    print("started")
     time_begin = time.time()
     comm = MPI.COMM_WORLD
     size = comm.Get_size()
@@ -78,26 +75,21 @@ def main():
             line = file.readline()
             if not line:
                 break
-            date, hour, sentiment = splitTweet(line)
-            tweet_dict = mergeTweet(tweet_dict, date, sentiment)
-            tweet_dict = mergeTweet(tweet_dict, hour, sentiment)
+            created_at, sentiment = splitTweet(line)
+            tweet_dict = mergeTweet(tweet_dict, created_at, sentiment)
             count_processed_chunk += len(line.encode("utf-8"))
              
         
         #this line is the first line of the next rank
 
         line = file.readline()
-        date, hour, sentiment = splitTweet(line)
-        tweet_dict = mergeTweet(tweet_dict, date, sentiment)
-        tweet_dict = mergeTweet(tweet_dict, hour, sentiment)
-    print("gathering")
+        created_at, sentiment = splitTweet(line)
+        tweet_dict = mergeTweet(tweet_dict, created_at, sentiment)
 
     gathered_list = comm.gather(tweet_dict, root=0)
-    print("gathered")
     gathered_tweet = {}
 
     if gathered_list is not None:
-        
         for gathered_dict in gathered_list:
             for key, value_list in gathered_dict.items():
                 gathered_tweet = mergeTweet(gathered_tweet, key, value_list)
@@ -111,12 +103,12 @@ def main():
 
     
     for key, value_list in gathered_tweet.items():
-        if len(key) == 2:
-            hour_max_sentiment[key] = value_list[0]
-            hour_max_count[key] = value_list[1]
-        else:
-            date_max_sentiment[key] = value_list[0]
-            date_max_count[key] = value_list[1]
+        hour_max_sentiment[key] = value_list[0]
+        hour_max_count[key] = value_list[1]
+        date_key = key.split("T")[0]
+        print(date_key)
+        date_max_sentiment[date_key] = value_list[0]
+        date_max_count[date_key] = value_list[1]
             
     key_date_sentiment, value_date_sentiment = maxFinder(date_max_sentiment)
     key_date_count, value_date_count = maxFinder(date_max_count)
@@ -134,5 +126,3 @@ def main():
     comm.barrier()
 if __name__ == "__main__":
     sys.exit(main())
-    print("done")
-    
