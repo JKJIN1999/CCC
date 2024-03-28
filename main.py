@@ -16,26 +16,28 @@ def splitTweet(line):
     sentiment = None
     if "created_at" in line:
             created_at = line.split('"created_at":"')[1].split('"',1)[0].split(":")[0]
-    if '"score"' not in line:
-        if '"sentiment"' in line:
+    if '"sentiment"' in line:
+        try:
             sentiment = float(line.split('"sentiment":')[1].split('}')[0])
+        except:
+            sentiment = None
     return created_at, sentiment
 
-def mergeTweet(tweet_collected, key, sentiment):
-        if isinstance(sentiment, float):
-            if  bool(key) and bool(sentiment):
+def mergeTweet(tweet_collected, key, value):
+        if isinstance(value, float):
+            if  bool(key) and bool(value):
                 if key in tweet_collected:
-                    tweet_collected[key][0] += sentiment
+                    tweet_collected[key][0] += value
                     tweet_collected[key][1] += 1
                 else:
-                    tweet_collected[key] = [sentiment, 1]
-        elif isinstance(sentiment, list):
-            if  bool(key) and bool(sentiment):
+                    tweet_collected[key] = [value, 1]
+        elif isinstance(value, list):
+            if  bool(key) and bool(value):
                 if key in tweet_collected:
-                    tweet_collected[key][0] += sentiment[0]
-                    tweet_collected[key][1] += sentiment[1]
+                    tweet_collected[key][0] += value[0]
+                    tweet_collected[key][1] += value[1]
                 else:
-                    tweet_collected[key] = sentiment
+                    tweet_collected[key] = value
         return tweet_collected
 
 def getArgs():
@@ -65,13 +67,14 @@ def main():
 
         file.seek(chunk_start)
         count_processed_chunk = 0
+
+        # Skip first line if rank is not 0 so we do not have any (the previous rank will read this line)
         if rank > 0:
             line = file.readline()
             count_processed_chunk += len(line.encode("utf-8"))
 
         while count_processed_chunk <= chunk_size:
-
-            #skip first line if rank is not 0 so we do not have any (the previous rank will read this line)
+            
             line = file.readline()
             if not line:
                 break
@@ -80,7 +83,7 @@ def main():
             count_processed_chunk += len(line.encode("utf-8"))
              
         
-        #this line is the first line of the next rank
+        #This line is the first line of the next rank (rank other than 0 will read one more line at the end)
 
         line = file.readline()
         created_at, sentiment = splitTweet(line)
@@ -106,7 +109,6 @@ def main():
         hour_max_sentiment[key] = value_list[0]
         hour_max_count[key] = value_list[1]
         date_key = key.split("T")[0]
-        print(date_key)
         date_max_sentiment[date_key] = value_list[0]
         date_max_count[date_key] = value_list[1]
             
@@ -124,5 +126,7 @@ def main():
             print(f"The happiest hour is {key_hour_sentiment} with {value_hour_sentiment} sentiment\n",file = f)
             print(f"Total run time = {time_end - time_begin}\n", file = f)
     comm.barrier()
+
+
 if __name__ == "__main__":
     sys.exit(main())
