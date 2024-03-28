@@ -116,8 +116,12 @@ def main():
         hour_max_sentiment[key] = value_list[0]
         hour_max_count[key] = value_list[1]
         date_key = key.split("T")[0]
-        date_max_sentiment[date_key] = value_list[0]
-        date_max_count[date_key] = value_list[1]
+        if date_key in date_max_sentiment:
+            date_max_sentiment[date_key] += value_list[0]
+            date_max_count[date_key] += value_list[1]
+        else:
+            date_max_sentiment[date_key] = value_list[0]
+            date_max_count[date_key] = value_list[1]
             
     key_date_sentiment, value_date_sentiment = maxFinder(date_max_sentiment)
     key_date_count, value_date_count = maxFinder(date_max_count)
