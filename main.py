@@ -15,7 +15,7 @@ def splitTweet(line):
     created_at = None
     sentiment = None
     if "created_at" in line:
-            created_at = line.split('"created_at":"')[1].split('"',1)[0].split(":")[0]
+        created_at = line.split('"created_at":"')[1].split('"',1)[0].split(":")[0]
     if '"sentiment"' in line:
         try:
             sentiment = float(line.split('"sentiment":')[1].split('}')[0])
@@ -24,21 +24,29 @@ def splitTweet(line):
     return created_at, sentiment
 
 def mergeTweet(tweet_collected, key, value):
-        if isinstance(value, float):
-            if  bool(key) and bool(value):
-                if key in tweet_collected:
-                    tweet_collected[key][0] += value
-                    tweet_collected[key][1] += 1
-                else:
-                    tweet_collected[key] = [value, 1]
-        elif isinstance(value, list):
-            if  bool(key) and bool(value):
-                if key in tweet_collected:
-                    tweet_collected[key][0] += value[0]
-                    tweet_collected[key][1] += value[1]
-                else:
-                    tweet_collected[key] = value
-        return tweet_collected
+    if isinstance(value, float):
+        if  bool(key) and bool(value):
+            if key in tweet_collected:
+                tweet_collected[key][0] += value
+                tweet_collected[key][1] += 1
+            else:
+                tweet_collected[key] = [value, 1]
+
+    elif isinstance(value, list):
+        if  bool(key) and bool(value):
+            if key in tweet_collected:
+                tweet_collected[key][0] += value[0]
+                tweet_collected[key][1] += value[1]
+            else:
+                tweet_collected[key] = value
+
+    else:
+        if key in tweet_collected:
+            tweet_collected[key][1] += 1
+        else:
+            tweet_collected[key] = [0, 1]
+            
+    return tweet_collected
 
 def getArgs():
     parser = argparse.ArgumentParser()
@@ -69,9 +77,8 @@ def main():
         count_processed_chunk = 0
 
         # Skip first line if rank is not 0 so we do not have any (the previous rank will read this line)
-        if rank > 0:
+        if rank > 0:    
             line = file.readline()
-            count_processed_chunk += len(line.encode("utf-8"))
 
         while count_processed_chunk <= chunk_size:
             
